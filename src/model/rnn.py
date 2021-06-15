@@ -1,13 +1,11 @@
 import matplotlib.pyplot as plt
-import numpy
 import tensorflow as tf
 from gensim.models import KeyedVectors
 from tensorflow import keras
 from tensorflow.keras import backend as K
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Embedding, Flatten
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Embedding
 from tensorflow.keras.metrics import Precision, Recall
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.preprocessing.text import Tokenizer
 
 from data.load_features import Features
 
@@ -69,9 +67,9 @@ def gensim_to_keras_embedding(keyed_vectors, train_embeddings=False):
     """
     # keyed_vectors = model.wv  # structure holding the result of training
     weights = keyed_vectors.vectors  # vectors themselves, a 2D numpy array
-    index_to_key = (
-        keyed_vectors.index_to_key
-    )  # which row in `weights` corresponds to which word?
+    # index_to_key = (
+    #     keyed_vectors.index_to_key
+    # )  # which row in `weights` corresponds to which word?
 
     layer = Embedding(
         input_dim=weights.shape[0],
@@ -104,18 +102,12 @@ history = model.fit(x_train, y_train, epochs=10, validation_data=(x_test, y_test
 precisions_test = history.history["val_precision"]
 recalls_test = history.history["val_recall"]
 
-precisions_train = history.history["precision"]
-recalls_train = history.history["recall"]
-
 f_test = [(2 * p * r) / (p + r) for p in precisions_test for r in recalls_test]
-f_train = [(2 * p * r) / (p + r) for p in precisions_train for r in recalls_train]
 
-
-plt.legend(["train", "test"], loc="upper left")
-
-# plt.plot(f_train)
 plt.plot(f_test)
-plt.ylabel("F-Measure")
+plt.plot(precisions_test)
+plt.plot(recalls_test)
+plt.ylabel("Metric")
 plt.xlabel("Epoch")
-# plt.legend(['Train', 'Test'], loc='upper left')
+plt.legend(["F-Measure", "Precision", "Recall"], loc="upper left")
 plt.show()
