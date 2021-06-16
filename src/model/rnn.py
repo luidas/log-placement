@@ -1,45 +1,53 @@
+"""
+processes data
+creates word embedding layer
+creates a neural network
+fits network outputs graph with metrics
+"""
 import matplotlib.pyplot as plt
 import tensorflow as tf
-from gensim.models import KeyedVectors
-from tensorflow import keras
-from tensorflow.keras import backend as K
+from gensim.models import Word2Vec
 from tensorflow.keras.layers import LSTM, Dense, Dropout, Embedding
 from tensorflow.keras.metrics import Precision, Recall
 from tensorflow.keras.models import Sequential
 
 from data.load_features import Features
 
-
-def recall_m(y_true, y_pred):
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
-    recall = true_positives / (possible_positives + K.epsilon())
-    return recall
-
-
-def precision_m(y_true, y_pred):
-    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
-    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
-    precision = true_positives / (predicted_positives + K.epsilon())
-    return precision
-
-
-def f1_m(y_true, y_pred):
-    precision = precision_m(y_true, y_pred)
-    recall = recall_m(y_true, y_pred)
-    return 2 * ((precision * recall) / (precision + recall + K.epsilon()))
-
-
-word2vec = KeyedVectors.load("models/word2vec/unfiltered_unlimited.wordvectors")
-
 features = Features()
-
 features.convert_to_numpy()
 features.pad_features()
-features.convert_to_numbers(word2vec.key_to_index)
 
 X = features.getX()
 Y = features.getY()
+
+
+def get_embeddings(minimum, dimensions, window):
+    """Method to get word embeddings
+
+    Args:
+        minimum (int): count threshold
+        dimensions (int): size of word vectors
+        window (int): distance between the current and predicted word
+
+    Returns:
+        KeyedVectors: mapping between words and embeddings
+    """
+    emb_model = Word2Vec(
+        X.tolist(),
+        min_count=minimum,
+        vector_size=dimensions,
+        workers=4,
+        window=window,
+        sg=1,
+    )
+    word_vectors = emb_model.wv
+    return word_vectors
+
+
+word2vec = get_embeddings(0, 200, 5)
+
+X = features.convert_to_numbers(word2vec.key_to_index, X)
+
 
 (x_train, y_train), (x_test, y_test) = (
     X[: int(X.shape[0] * 0.8)],
@@ -95,7 +103,7 @@ model.compile(
     metrics=["accuracy", Precision(), Recall()],
 )
 
-keras.utils.plot_model(model, show_shapes=True, show_layer_names=False)
+# keras.utils.plot_model(model, show_shapes=True, show_layer_names=False)
 
 history = model.fit(x_train, y_train, epochs=10, validation_data=(x_test, y_test))
 

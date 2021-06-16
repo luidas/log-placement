@@ -1,3 +1,5 @@
+"""module that contains a class
+"""
 import json
 
 import matplotlib.pyplot as plt
@@ -5,24 +7,38 @@ import numpy
 
 
 class Features:
+    """class to interact with the data"""
+
     def __init__(self):
         self.limit = 100
-        self.X = []
-        self.Y = []
+        self.features = []
+        self.labels = []
         self.load_features(self.limit)
 
-    def getX(self):
-        return self.X
+    def get_features(self):
+        """returns the features
 
-    def getY(self):
-        return self.Y
+        Returns:
+            [[string]]: list of lists of tokens
+        """
+        return self.features
 
-    def initialize(self):
-        self.load_features(self.limit)
+    def get_labels(self):
+        """gets the labels
+
+        Returns:
+            [bool]: list of labels
+        """
+        return self.labels
 
     def load_features(self, limit):
-        with open("data/processed/dataset.json") as f:
-            data = json.load(f)
+        """opens dataset stored at data/processed/dataset.json. reads values to a variable
+
+        Args:
+            limit (int): don't read sequences longer than this
+        """
+        with open("data/processed/dataset.json") as dataset:
+            data = json.load(dataset)
 
             methods_labeled = data["methodsLabeled"]
 
@@ -31,24 +47,31 @@ class Features:
                 for block in method_blocks:
                     tokens = method_blocks[block]["tokens"]
                     if len(tokens) <= limit:
-                        self.X.append(method_blocks[block]["tokens"])
-                        self.Y.append(method_blocks[block]["is_logged"])
+                        self.features.append(method_blocks[block]["tokens"])
+                        self.labels.append(method_blocks[block]["is_logged"])
 
     def convert_to_numpy(self):
-        self.X = numpy.array([numpy.array(feature) for feature in self.X])
-        self.Y = numpy.array([numpy.array(label) for label in self.Y])
+        """converts lists to numpy arrays"""
+        self.features = numpy.array([numpy.array(feature) for feature in self.features])
+        self.labels = numpy.array([numpy.array(label) for label in self.labels])
 
     def find_max_size(self):
+        """finds the maximum size of a feature sequence
+
+        Returns:
+            int: max size
+        """
         max_size = 0
-        for tokens in self.X:
+        for tokens in self.features:
             tokens_size = tokens.size
             if tokens_size > max_size:
                 max_size = tokens_size
         return max_size
 
     def pad_features(self):
+        """pads feature sequences with empty strings"""
         max_size = self.find_max_size()
-        self.X = numpy.array(
+        self.features = numpy.array(
             [
                 numpy.pad(
                     sequence,
@@ -56,26 +79,41 @@ class Features:
                     "constant",
                     constant_values=("", ""),
                 )
-                for sequence in self.X
+                for sequence in self.features
             ]
         )
-        print(self.X.shape)
 
-    def convert_to_numbers(self, key_to_index):
+    @classmethod
+    def convert_to_numbers(cls, key_to_index, array):
+        """converts string to numbers
+
+        Args:
+            key_to_index (dict): dictionary to look up words integer index
+            array (array of strings): array to convert
+
+        Returns:
+            array of ints: converted array
+        """
         map_function = numpy.vectorize(lambda token: key_to_index[token])
 
-        self.X = map_function(self.X)
+        return map_function(array)
 
     def false_percentage(self):
-        labels = self.getY()
-        sum = 0
+        """calculate percentage of false labels
+
+        Returns:
+            int: percentage of false labels
+        """
+        labels = self.get_labels()
+        false_labels = 0
         for label in labels:
-            if label == False:
-                sum += 1
+            if label is False:
+                false_labels += 1
         return sum / len(labels)
 
     def show_length_histogram(self):
-        lengths = [len(sequence) for sequence in loader.getX()]
+        """show histogram of feature lengths"""
+        lengths = [len(sequence) for sequence in self.get_features()]
 
         plt.hist(lengths, bins=30)
         plt.xlabel("Length")
